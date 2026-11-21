@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twin Gardens — Spot the Difference</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #1d3a24;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #f4f1e6;
+    display: flex;
+    justify-content: center;
+  }
+  #app { width: 1280px; padding: 12px 0 20px; }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding: 6px 8px 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 28px; margin: 0; color: #ffe66d; letter-spacing: 0.5px; }
+  header .sub { font-size: 14px; color: #cfe8c0; }
+  .hud {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .pill {
+    background: #2c5233;
+    border: 1px solid #4a7a52;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pill.low { background: #7a2e2e; border-color: #c0392b; color: #ffd9d9; }
+  #stage { position: relative; width: 1280px; }
+  canvas {
+    display: block;
+    width: 1280px;
+    height: 560px;
+    background: #7ec8f2;
+    border-radius: 12px;
+    cursor: crosshair;
+  }
+  canvas.shake { animation: shake 0.3s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 35, 20, 0.72);
+    border-radius: 12px;
+    z-index: 5;
+  }
+  .overlay.hidden { display: none; }
+  .card {
+    background: #fbf7ea;
+    color: #22301f;
+    border-radius: 16px;
+    padding: 34px 44px;
+    max-width: 560px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  }
+  .card h2 { margin: 0 0 10px; font-size: 34px; color: #2c5233; }
+  .card p { margin: 8px 0; font-size: 17px; line-height: 1.5; }
+  .card .big { font-size: 22px; font-weight: 700; color: #2c5233; }
+  .card .keys { font-size: 14px; color: #5a6b52; }
+  .card button {
+    margin-top: 16px;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 12px 34px;
+    border: none;
+    border-radius: 999px;
+    background: #2fbf4a;
+    color: #fff;
+    cursor: pointer;
+  }
+  .card button:hover { background: #28a83e; }
+  footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 8px 0;
+  }
+  footer button {
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 1px solid #4a7a52;
+    background: #2c5233;
+    color: #f4f1e6;
+    cursor: pointer;
+  }
+  footer button:hover:not(:disabled) { background: #3a6a44; }
+  footer button:disabled { opacity: 0.45; cursor: default; }
+  #level-dots { margin-left: auto; display: flex; gap: 8px; }
+  .dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2c5233;
+    border: 1px solid #4a7a52;
+    color: #cfe8c0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .dot.current { background: #ffe66d; color: #22301f; border-color: #ffe66d; }
+  .dot.done { background: #2fbf4a; color: #fff; border-color: #2fbf4a; }
+  .hint-line { font-size: 13px; color: #9db894; margin-left: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🌿 Twin Gardens</h1>
+    <span class="sub">Spot the Difference</span>
+    <div class="hud">
+      <span class="pill" id="hud-level">Level 1 of 3 — Sunny Park</span>
+      <span class="pill" id="hud-count">Found 0 of 7</span>
+      <span class="pill" id="hud-timer">03:00</span>
+      <span class="pill" id="hud-score">Score 0</span>
+    </div>
+  </header>
+
+  <div id="stage">
+    <canvas id="panels" width="1280" height="560"></canvas>
+
+    <div class="overlay" id="overlay-start">
+      <div class="card">
+        <h2>🌿 Twin Gardens</h2>
+        <p class="big">Spot the Difference</p>
+        <p>Two pictures of the same garden hang side by side — but the right
+        one has <b>7 differences</b> hiding in it. Click a difference on
+        either picture to circle it. Find all 7 before the timer runs out.</p>
+        <p>Three gardens wait for you: a sunny park, a cozy kitchen, and a
+        mountain camp at dusk. Each one hides its differences a little
+        better than the last.</p>
+        <p class="keys">Mouse or tap to mark · H = hint · M = mute ·
+        R = restart level · N = next level</p>
+        <button id="btn-start">Start playing</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overlay-level">
+      <div class="card">
+        <h2 id="level-title">Level complete!</h2>
+        <p id="level-detail"></p>
+        <p class="big" id="level-score"></p>
+        <button id="btn-next">Next level →</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overlay-victory">
+      <div class="card">
+        <h2>🏆 You found them all!</h2>
+        <p id="victory-detail"></p>
+        <p class="big" id="victory-score"></p>
+        <p>Three gardens, twenty-one differences, one very sharp pair of eyes.</p>
+        <button id="btn-again">Play again</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overlay-timeout">
+      <div class="card">
+        <h2>⏰ Time's up!</h2>
+        <p id="timeout-detail"></p>
+        <p>Take another look — the differences are still there, waiting.</p>
+        <button id="btn-retry">Try this level again</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <button id="btn-hint">💡 Hint (3)</button>
+    <button id="btn-mute">🔊 Sound on</button>
+    <button id="btn-restart">↻ Restart level</button>
+    <span class="hint-line">3 hints per level · wrong clicks cost nothing but a buzz</span>
+    <div id="level-dots"></div>
+  </footer>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
