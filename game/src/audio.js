@@ -7,6 +7,12 @@ export class SoundBank {
   constructor() {
     this.context = null;
     this.muted = false;
+    // Restore the player's saved sound choice so it survives a reload.
+    try {
+      this.muted = window.localStorage.getItem('twin-gardens.muted') === '1';
+    } catch (e) {
+      this.muted = false;
+    }
   }
 
   ensure() {
@@ -48,6 +54,12 @@ export class SoundBank {
     this.tone(130.81, 0, 0.18, 'sawtooth', 0.08);
   }
 
+  // A soft tick for the final countdown: one short blip per second.
+  tick() {
+    this.ensure();
+    this.tone(1200, 0, 0.05, 'sine', 0.07);
+  }
+
   // A tiny tick for buttons.
   click() {
     this.ensure();
@@ -64,6 +76,11 @@ export class SoundBank {
 
   toggleMute() {
     this.muted = !this.muted;
+    try {
+      window.localStorage.setItem('twin-gardens.muted', this.muted ? '1' : '0');
+    } catch (e) {
+      // Storage unavailable (e.g. private mode): mute still works for this session.
+    }
     return this.muted;
   }
 }

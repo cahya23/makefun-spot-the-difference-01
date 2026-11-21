@@ -53,6 +53,7 @@ const game = {
   score: 0,
   timeLeft: LEVEL_TIME,
   lastTick: 0,
+  lastCountdownSecond: null, // displayed second last ticked in the final 10s
   frozen: false, // shot mode: no countdown, no animation
   levelBonus: 0,
 };
@@ -95,6 +96,7 @@ function startLevel(index) {
   game.hintsLeft = HINTS_PER_LEVEL;
   game.hintPulse = null;
   game.timeLeft = LEVEL_TIME;
+  game.lastCountdownSecond = null;
   game.state = 'playing';
   showOverlay(null);
   updateHud();
@@ -271,6 +273,13 @@ function frame(now) {
     } else {
       hudTimer.textContent = formatTime(game.timeLeft);
       hudTimer.classList.toggle('low', game.timeLeft <= 30);
+      // Soft tick once per second in the final 10 seconds. tick() itself
+      // stays silent while muted (tone() returns early when muted).
+      const secondLeft = Math.ceil(game.timeLeft);
+      if (secondLeft <= 10 && secondLeft !== game.lastCountdownSecond) {
+        game.lastCountdownSecond = secondLeft;
+        sounds.tick();
+      }
     }
   }
   drawPanels(now);
